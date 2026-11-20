@@ -29,3 +29,20 @@ Homestead.json
 .env.production
 .phpactor.json
 auth.json
+
+# IDE in OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Lokalne nastavitve Claude Code
+.claude/settings.local.json
+
+# Lokalna razvojna baza in posnetki Playwright MCP
+/database/*.sqlite
+/.playwright-mcp/
+
+# Skrivnosti posameznih instanc (ustvari deploy.sh na strežniku) — v gitu samo predloga
+/instances/*.env
+!/instances/example.env

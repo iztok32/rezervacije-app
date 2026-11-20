@@ -1,0 +1,58 @@
+# Lokalni preizkus produkcijske slike (aplikacija + PostgreSQL):
+#   docker compose up --build
+#   docker compose exec app php artisan db:seed --force     # prvič: admin + predloge
+# Aplikacija: http://localhost:8080 (admin@example.com / password)
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: rezervacije:latest
+    ports:
+      - "8080:80"
+    environment:
+      APP_NAME: Rezervacije
+      APP_ENV: local
+      APP_KEY: ${APP_KEY:-base64:Z2VuZXJhdGUtYS1yZWFsLWtleS1mb3ItcHJvZHVjdGlvbiE=}
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8080
+      APP_LOCALE: sl
+      APP_TIMEZONE: Europe/Ljubljana
+      AVAILABLE_LOCALES: sl,en
+      LOG_CHANNEL: stderr
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: rezervacije
+      DB_USERNAME: rezervacije
+      DB_PASSWORD: secret
+      SESSION_DRIVER: database
+      QUEUE_CONNECTION: database
+      CACHE_STORE: database
+      MAIL_MAILER: log
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - storage_uploads:/var/www/html/storage/app/public
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: rezervacije
+      POSTGRES_USER: rezervacije
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rezervacije -d rezervacije"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
+  storage_uploads:

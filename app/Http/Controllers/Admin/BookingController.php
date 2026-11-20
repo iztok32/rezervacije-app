@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\BookingStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Presenters\BookingHistory;
 use App\Http\Presenters\BookingPresenter;
 use App\Models\Booking;
+use App\Models\BookingEvent;
 use App\Models\Resource;
 use App\Models\ResourceType;
 use App\Services\Booking\BookingService;
@@ -87,6 +89,7 @@ class BookingController extends Controller
                 ->values(),
             'resources' => $resources,
             'canManage' => $booking->isManageableBy($request->user()),
+            'history' => BookingHistory::for($booking),
         ]);
     }
 
@@ -104,8 +107,9 @@ class BookingController extends Controller
             $this->bookings->assignResource($booking, $validated['resource_id'], $request->user());
         }
 
-        if (array_key_exists('internal_notes', $validated)) {
+        if (array_key_exists('internal_notes', $validated) && $validated['internal_notes'] !== $booking->internal_notes) {
             $booking->update(['internal_notes' => $validated['internal_notes']]);
+            $booking->recordEvent(BookingEvent::NOTES, $request->user());
         }
 
         return back()->with('success', __('Booking updated.'));

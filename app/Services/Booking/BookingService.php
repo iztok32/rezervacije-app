@@ -6,6 +6,7 @@ use App\Enums\BookingMode;
 use App\Enums\BookingStatus;
 use App\Enums\Permission;
 use App\Models\Booking;
+use App\Models\BookingEvent;
 use App\Models\Resource;
 use App\Models\ResourceType;
 use App\Models\Setting;
@@ -111,7 +112,7 @@ class BookingService
 
             $status = $type->requires_approval && ! $privileged ? BookingStatus::Pending : BookingStatus::Confirmed;
 
-            return Booking::create($draft->toAttributes() + $customer + [
+            $booking = Booking::create($draft->toAttributes() + $customer + [
                 'resource_type_id' => $type->id,
                 'status' => $status,
                 'notes' => $input['notes'] ?? null,
@@ -119,6 +120,10 @@ class BookingService
                 'created_by_user_id' => $actor?->id,
                 'confirmed_at' => $status === BookingStatus::Confirmed ? now() : null,
             ]);
+
+            $booking->recordEvent(BookingEvent::CREATED, $actor, ['status' => $status->value, 'for_customer' => $privileged]);
+
+            return $booking;
         });
 
         $this->notifier->created($booking);
@@ -167,11 +172,13 @@ class BookingService
             throw new BookingException('booking', $error);
         }
 
+        $from = $booking->status->value;
         $booking->update([
             'status' => BookingStatus::Cancelled,
             'cancelled_at' => now(),
             'cancellation_reason' => $reason,
         ]);
+        $booking->recordEvent(BookingEvent::STATUS, $actor, array_filter(['from' => $from, 'to' => 'cancelled', 'reason' => $reason]));
 
         $this->notifier->statusChanged($booking, $actor);
 
@@ -187,12 +194,14 @@ class BookingService
             throw new BookingException('status', __('This status change is not allowed.'));
         }
 
+        $from = $booking->status->value;
         $booking->update(array_filter([
             'status' => $status,
             'confirmed_at' => $status === BookingStatus::Confirmed && ! $booking->confirmed_at ? now() : null,
             'cancelled_at' => in_array($status, [BookingStatus::Cancelled, BookingStatus::Rejected], true) ? now() : null,
             'cancellation_reason' => $reason,
         ], fn ($v) => $v !== null));
+        $booking->recordEvent(BookingEvent::STATUS, $actor, array_filter(['from' => $from, 'to' => $status->value, 'reason' => $reason]));
 
         if (in_array($status, [BookingStatus::Confirmed, BookingStatus::Rejected, BookingStatus::Cancelled], true)) {
             $this->notifier->statusChanged($booking, $actor);
@@ -218,7 +227,7 @@ class BookingService
                 throw new BookingException('resource_id', __('Invalid resource.'));
             }
 
-            DB::transaction(function () use ($booking, $resource) {
+            DB::transaction(function () use ($booking, $resource, $actor) {
                 ResourceType::whereKey($booking->resource_type_id)->lockForUpdate()->first();
 
                 $type = $booking->type;
@@ -230,11 +239,16 @@ class BookingService
                     throw new BookingException('resource_id', __(':name is not available at this time.', ['name' => $resource->name]));
                 }
 
+                $previous = $booking->resource?->name;
                 $booking->update(['resource_id' => $resource->id]);
+                $booking->recordEvent(BookingEvent::RESOURCE, $actor, array_filter(['from' => $previous, 'to' => $resource->name]));
             });
         } else {
+            $previous = $booking->resource?->name;
             $booking->update(['resource_id' => null]);
+            $booking->recordEvent(BookingEvent::RESOURCE, $actor, array_filter(['from' => $previous]));
         }
+        $booking->unsetRelation('resource');
 
         return $booking;
     }

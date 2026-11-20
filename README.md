@@ -61,6 +61,17 @@ Gost (brez računa) dobi po e-pošti povezavo z žetonom za ogled in odpoved rez
 - **Zaprtje z obveščanjem**: obrazec za zaprtje pokaže rezervacije v tem obdobju in jih po izbiri odpove;
   stranke dobijo e-pošto o odpovedi z razlogom zaprtja.
 
+### Vsebina in zgodovina
+
+- **Vsebinske strani** (Vsebina → Strani, pravica `content.manage`): besedilo v Markdownu, na strežniku
+  pretvorjeno v varen HTML (brez surovega HTML-ja in `javascript:` povezav); javno na `/p/{slug}`,
+  osnutke vidijo samo uredniki.
+- **Javni meni** (Vsebina → Meni): postavke v glavi in nogi javne strani — stran, ponudba ali povezava;
+  vidno vsem, samo gostom ali samo prijavljenim. Neobjavljene strani in ponudba, do katere obiskovalec nima
+  dostopa (skupine strank), se ne prikažejo.
+- **Zgodovina rezervacije** (`booking_events`): oddaja, spremembe statusa, dodelitev vira, interne opombe,
+  opomnik — s časom in osebo; prikazana v podrobnostih rezervacije.
+
 ## Koda
 
 - `app/Services/Booking/` — jedro: `BookingService` (skupna pravila, zaklepanje, statusi),

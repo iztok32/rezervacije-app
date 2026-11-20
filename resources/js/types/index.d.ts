@@ -1,6 +1,6 @@
 export type Permission =
     | 'bookings.view' | 'bookings.manage' | 'bookings.create'
-    | 'offer.manage' | 'closures.manage' | 'messages.send' | 'users.manage' | 'roles.manage' | 'settings.manage';
+    | 'offer.manage' | 'closures.manage' | 'messages.send' | 'content.manage' | 'users.manage' | 'roles.manage' | 'settings.manage';
 export type BookingMode = 'timeslot' | 'service' | 'nightly' | 'hourly';
 export type ResourceSelection = 'customer' | 'auto' | 'staff';
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'rejected' | 'completed' | 'no_show';
@@ -16,6 +16,14 @@ export interface User {
     is_admin: boolean;
     permissions: Permission[];
     email_verified_at?: string | null;
+}
+
+export interface MenuLink {
+    id: number;
+    label: string;
+    href: string;
+    external: boolean;
+    new_tab: boolean;
 }
 
 export interface Business {
@@ -145,6 +153,7 @@ export type PageProps<T extends Record<string, unknown> = Record<string, unknown
     bookableTypes: TypeLink[];
     pendingBookings: number;
     unreadMessages: number;
+    menu: { header: MenuLink[]; footer: MenuLink[] };
     flash: { success?: string | null; error?: string | null };
     locale: string;
     availableLocales: string[];

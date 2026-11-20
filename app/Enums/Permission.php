@@ -14,6 +14,7 @@ enum Permission: string
     case OfferManage = 'offer.manage';
     case ClosuresManage = 'closures.manage';
     case MessagesSend = 'messages.send';
+    case ContentManage = 'content.manage';
     case UsersManage = 'users.manage';
     case RolesManage = 'roles.manage';
     case SettingsManage = 'settings.manage';
@@ -27,6 +28,7 @@ enum Permission: string
             self::OfferManage => __('Manage offer'),
             self::ClosuresManage => __('Manage closures'),
             self::MessagesSend => __('Send messages to customers'),
+            self::ContentManage => __('Manage pages and menu'),
             self::UsersManage => __('Manage users and customer groups'),
             self::RolesManage => __('Manage roles and permissions'),
             self::SettingsManage => __('Manage settings'),
@@ -42,6 +44,7 @@ enum Permission: string
             self::OfferManage => __('Resource types, resources, services, sessions and working hours.'),
             self::ClosuresManage => __('Holidays, vacations and other periods without bookings.'),
             self::MessagesSend => __('Email and portal messages to customers, groups or customers with bookings.'),
+            self::ContentManage => __('Content pages (about us, price list, terms) and the public menu.'),
             self::UsersManage => __('Add and edit customers and staff, customer group membership.'),
             self::RolesManage => __('Create roles, assign permissions and roles to users.'),
             self::SettingsManage => __('Business details, booking rules and terms.'),

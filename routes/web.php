@@ -8,12 +8,14 @@ use App\Http\Controllers\InboxController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\ManageBookingController;
 use App\Http\Controllers\MyBookingsController;
+use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 // ── Javni del: pregled ponudbe, rezervacija (tudi kot gost), upravljanje rezervacije ──
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::post('/locale', LocaleController::class)->name('locale.update');
+Route::get('/p/{page:slug}', [PageController::class, 'show'])->name('pages.show');
 
 Route::get('/book/{resourceType}', [BookingFlowController::class, 'show'])->name('book.show');
 Route::get('/book/{resourceType}/availability', [BookingFlowController::class, 'availability'])
@@ -96,6 +98,20 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
         Route::get('messages/users', [Admin\MessageController::class, 'users'])->name('messages.users');
         Route::post('messages', [Admin\MessageController::class, 'store'])->middleware('throttle:10,1')->name('messages.store');
         Route::get('messages/{message}', [Admin\MessageController::class, 'show'])->name('messages.show');
+    });
+
+    Route::middleware('can:content.manage')->group(function () {
+        Route::get('content', [Admin\ContentController::class, 'index'])->name('content.index');
+        Route::get('pages/create', [Admin\ContentController::class, 'create'])->name('pages.create');
+        Route::post('pages', [Admin\ContentController::class, 'store'])->name('pages.store');
+        Route::get('pages/{page}', [Admin\ContentController::class, 'edit'])->name('pages.edit');
+        Route::put('pages/{page}', [Admin\ContentController::class, 'update'])->name('pages.update');
+        Route::delete('pages/{page}', [Admin\ContentController::class, 'destroy'])->name('pages.destroy');
+
+        Route::post('menu-items', [Admin\ContentController::class, 'storeMenuItem'])->name('menu-items.store');
+        Route::post('menu-items/reorder', [Admin\ContentController::class, 'reorderMenu'])->name('menu-items.reorder');
+        Route::put('menu-items/{menuItem}', [Admin\ContentController::class, 'updateMenuItem'])->name('menu-items.update');
+        Route::delete('menu-items/{menuItem}', [Admin\ContentController::class, 'destroyMenuItem'])->name('menu-items.destroy');
     });
 
     Route::middleware('can:users.manage')->group(function () {

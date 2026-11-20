@@ -4,6 +4,7 @@ namespace App\Services\Notifications;
 
 use App\Enums\BookingStatus;
 use App\Models\Booking;
+use App\Models\BookingEvent;
 use App\Models\ResourceType;
 use App\Notifications\BookingReminder;
 use Illuminate\Support\Facades\Notification;
@@ -44,6 +45,7 @@ class ReminderSender
                 try {
                     Notification::route('mail', $booking->customer_email)
                         ->notify((new BookingReminder($booking))->locale($booking->locale ?? config('app.locale')));
+                    $booking->recordEvent(BookingEvent::REMINDER);
                     $sent++;
                 } catch (Throwable $e) {
                     report($e);

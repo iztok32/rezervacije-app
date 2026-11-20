@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Enums\BookingStatus;
 use App\Enums\Permission;
 use App\Models\Booking;
+use App\Models\MenuItem;
 use App\Models\ResourceType;
 use App\Models\Setting;
 use Illuminate\Http\Request;
@@ -56,6 +57,8 @@ class HandleInertiaRequests extends Middleware
             'pendingBookings' => fn () => $user?->hasPermission(Permission::BookingsView)
                 ? Booking::visibleTo($user)->where('status', BookingStatus::Pending)->count()
                 : 0,
+            // Javni meni (glava, noga) za tega obiskovalca
+            'menu' => fn () => MenuItem::forVisitor($user),
             'unreadMessages' => fn () => $user
                 ? $user->inbox()->whereNull('read_at')->count()
                 : 0,

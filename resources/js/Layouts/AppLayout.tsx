@@ -1,7 +1,7 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { PropsWithChildren, ReactNode } from 'react';
 import {
-    Ban, CalendarCheck, CalendarDays, ChevronsUpDown, ClipboardList, Home, Inbox, LayoutDashboard, LogOut,
+    Ban, CalendarCheck, CalendarDays, ChevronsUpDown, ClipboardList, FileText, Home, Inbox, LayoutDashboard, LogOut,
     Send, Settings, Shapes, ShieldCheck, Tags, UserRound, Users,
 } from 'lucide-react';
 import FlashToaster from '@/Components/FlashToaster';
@@ -52,6 +52,7 @@ export default function AppLayout({ children, header }: PropsWithChildren<{ head
     const admin = allowed([
         { label: t('Offer'), href: route('admin.resource-types.index'), icon: <Shapes />, active: current('admin.resource-types.*'), permission: 'offer.manage' },
         { label: t('Closures'), href: route('admin.closures.index'), icon: <Ban />, active: current('admin.closures.*'), permission: 'closures.manage' },
+        { label: t('Content'), href: route('admin.content.index'), icon: <FileText />, active: current('admin.content.*') || current('admin.pages.*'), permission: 'content.manage' },
         { label: t('Users'), href: route('admin.users.index'), icon: <Users />, active: current('admin.users.*'), permission: 'users.manage' },
         { label: t('Customer groups'), href: route('admin.customer-groups.index'), icon: <Tags />, active: current('admin.customer-groups.*'), permission: 'users.manage' },
         { label: t('Roles'), href: route('admin.roles.index'), icon: <ShieldCheck />, active: current('admin.roles.*'), permission: 'roles.manage' },

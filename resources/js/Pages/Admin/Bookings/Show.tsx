@@ -13,12 +13,22 @@ import { formatDate, formatLongDate, formatTime } from '@/lib/dates';
 import { useTranslation } from '@/lib/i18n';
 import { Booking, Option } from '@/types';
 
+interface HistoryEntry {
+    id: number;
+    event: string;
+    at: string;
+    actor: string;
+    text: string;
+    note: string | null;
+}
+
 interface Props {
     booking: Booking;
     manageUrl: string;
     transitions: Option[];
     resources: { id: number; name: string }[];
     canManage: boolean;
+    history: HistoryEntry[];
 }
 
 const ACTION_STYLE: Record<string, 'default' | 'destructive' | 'outline' | 'secondary'> = {
@@ -38,7 +48,7 @@ const ACTION_LABEL: Record<string, string> = {
 };
 
 /** Podrobnosti rezervacije za osebje: statusi, dodelitev vira, interne opombe. */
-export default function Show({ booking, manageUrl, transitions, resources, canManage }: Props) {
+export default function Show({ booking, manageUrl, transitions, resources, canManage, history }: Props) {
     const { t, tc, money, locale } = useTranslation();
     const [reason, setReason] = useState('');
     const notes = useForm({ internal_notes: booking.internal_notes ?? '' });
@@ -161,6 +171,26 @@ export default function Show({ booking, manageUrl, transitions, resources, canMa
                             </div>
                         </CardContent>
                     </Card>
+
+                    {history.length > 0 && (
+                        <Card>
+                            <CardHeader><CardTitle className="text-base">{t('History')}</CardTitle></CardHeader>
+                            <CardContent>
+                                <ol className="relative space-y-4 border-l pl-4">
+                                    {history.map((h) => (
+                                        <li key={h.id} className="relative">
+                                            <span className="absolute -left-[1.3rem] top-1.5 h-2 w-2 rounded-full bg-primary/70 ring-4 ring-card" />
+                                            <p className="text-sm">{h.text}</p>
+                                            {h.note && <p className="text-xs italic text-muted-foreground">„{h.note}“</p>}
+                                            <p className="text-xs text-muted-foreground">
+                                                {formatDate(h.at, locale)} {formatTime(h.at)} · {h.actor}
+                                            </p>
+                                        </li>
+                                    ))}
+                                </ol>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
             </div>
         </AppLayout>

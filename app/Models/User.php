@@ -48,6 +48,12 @@ class User extends Authenticatable
         return $this->belongsToMany(CustomerGroup::class);
     }
 
+    /** Sporočila v nabiralniku portala. */
+    public function inbox(): HasMany
+    {
+        return $this->hasMany(MessageRecipient::class)->where('in_portal', true);
+    }
+
     public function bookings(): HasMany
     {
         return $this->hasMany(Booking::class);

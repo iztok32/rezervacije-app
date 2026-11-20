@@ -1,6 +1,6 @@
 export type Permission =
     | 'bookings.view' | 'bookings.manage' | 'bookings.create'
-    | 'offer.manage' | 'closures.manage' | 'users.manage' | 'roles.manage' | 'settings.manage';
+    | 'offer.manage' | 'closures.manage' | 'messages.send' | 'users.manage' | 'roles.manage' | 'settings.manage';
 export type BookingMode = 'timeslot' | 'service' | 'nightly' | 'hourly';
 export type ResourceSelection = 'customer' | 'auto' | 'staff';
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'rejected' | 'completed' | 'no_show';
@@ -61,6 +61,7 @@ export interface ResourceTypeData {
     requires_approval: boolean;
     max_quantity_per_booking: number;
     cancellation_hours: number | null;
+    reminder_hours: number | null;
     min_advance_minutes: number;
     max_advance_days: number;
     slot_interval_minutes: number;
@@ -143,6 +144,7 @@ export type PageProps<T extends Record<string, unknown> = Record<string, unknown
     business: Business;
     bookableTypes: TypeLink[];
     pendingBookings: number;
+    unreadMessages: number;
     flash: { success?: string | null; error?: string | null };
     locale: string;
     availableLocales: string[];

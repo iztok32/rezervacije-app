@@ -10,7 +10,11 @@ arhitekture je v `README.md`.
   (127.0.0.1:5432, `root`, brez gesla, baza `rezervacije_app`); testi tečejo na SQLite v pomnilniku.
 - Ne poganjaj artisan v Dockerju z bind mountom projekta — `storage:link` v vsebniku pokvari
   `public/storage` (kaže na `/app/...`). Docker je samo za preizkus produkcijske slike (`docker compose up`).
-- Pošta gre v Herdov lovilnik (SMTP 2525).
+- Pošta gre v Herdov lovilnik (SMTP 2525). Lokalni `.env` ima `QUEUE_CONNECTION=sync` (Herd nima queue
+  workerja); v produkciji je `database` z workerjem in razporejevalnikom v supervisord.
+- Pravice: nova funkcija administracije dobi pravico v `App\Enums\Permission` (+ tip v `resources/js/types`),
+  route z `can:...` in postavko v `AppLayout` s `permission`. Rezervacije za osebje vedno filtriraj z
+  `Booking::visibleTo($user)`.
 - Node je lokalen: `npx tsc --noEmit`, `npm run build`.
 - Po spremembah PHP poženi `vendor/bin/pint` in teste.
 

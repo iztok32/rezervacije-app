@@ -28,6 +28,7 @@ export default function SettingsTab({ type, modes, selections, customerGroups }:
         min_advance_minutes: type.min_advance_minutes,
         max_advance_days: type.max_advance_days,
         cancellation_hours: type.cancellation_hours as number | null,
+        reminder_hours: type.reminder_hours as number | null,
         slot_interval_minutes: type.slot_interval_minutes,
         min_duration_minutes: type.min_duration_minutes as number | null,
         max_duration_minutes: type.max_duration_minutes as number | null,
@@ -123,6 +124,9 @@ export default function SettingsTab({ type, modes, selections, customerGroups }:
                     </Field>
                     <Field label={t('Free cancellation until (hours before)')} error={e.cancellation_hours} hint={t('Empty = customers can always cancel before the start.')}>
                         <Input type="number" min={0} value={d.cancellation_hours ?? ''} onChange={(ev) => form.setData('cancellation_hours', numberOrNull(ev.target.value))} />
+                    </Field>
+                    <Field label={t('Reminder (hours before)')} error={e.reminder_hours} hint={t('Email reminder to the customer before a confirmed booking. Empty = no reminder.')}>
+                        <Input type="number" min={1} value={d.reminder_hours ?? ''} onChange={(ev) => form.setData('reminder_hours', numberOrNull(ev.target.value))} />
                     </Field>
                     {(mode === 'timeslot' || mode === 'hourly') && (
                         <Field label={t('Max places per booking')} error={e.max_quantity_per_booking}>

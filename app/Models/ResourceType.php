@@ -22,7 +22,7 @@ class ResourceType extends Model
         'name', 'slug', 'description', 'icon', 'color',
         'booking_mode', 'resource_label', 'resource_selection',
         'allow_guests', 'requires_approval',
-        'min_advance_minutes', 'max_advance_days', 'cancellation_hours',
+        'min_advance_minutes', 'max_advance_days', 'cancellation_hours', 'reminder_hours',
         'slot_interval_minutes', 'min_duration_minutes', 'max_duration_minutes',
         'nightly_unit', 'check_in_time', 'check_out_time', 'min_units', 'max_units',
         'max_quantity_per_booking',

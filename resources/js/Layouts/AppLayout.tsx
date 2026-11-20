@@ -1,8 +1,8 @@
 import { Link, router, usePage } from '@inertiajs/react';
 import { PropsWithChildren, ReactNode } from 'react';
 import {
-    Ban, CalendarCheck, CalendarDays, ChevronsUpDown, ClipboardList, Home, LayoutDashboard, LogOut,
-    Settings, Shapes, ShieldCheck, Tags, UserRound, Users,
+    Ban, CalendarCheck, CalendarDays, ChevronsUpDown, ClipboardList, Home, Inbox, LayoutDashboard, LogOut,
+    Send, Settings, Shapes, ShieldCheck, Tags, UserRound, Users,
 } from 'lucide-react';
 import FlashToaster from '@/Components/FlashToaster';
 import LanguageSwitcher from '@/Components/LanguageSwitcher';
@@ -30,7 +30,7 @@ interface NavItem {
 
 /** Postavitev za prijavljene uporabnike: meni se zgradi iz pravic vloge. */
 export default function AppLayout({ children, header }: PropsWithChildren<{ header?: ReactNode }>) {
-    const { auth, business, bookableTypes, pendingBookings } = usePage<PageProps>().props;
+    const { auth, business, bookableTypes, pendingBookings, unreadMessages } = usePage<PageProps>().props;
     const { t } = useTranslation();
     const can = useCan();
     const user = auth.user!;
@@ -40,11 +40,13 @@ export default function AppLayout({ children, header }: PropsWithChildren<{ head
     const main: NavItem[] = [
         { label: t('Overview'), href: route('dashboard'), icon: <LayoutDashboard />, active: current('dashboard') },
         { label: t('My bookings'), href: route('my-bookings'), icon: <ClipboardList />, active: current('my-bookings') },
+        { label: t('Inbox'), href: route('inbox'), icon: <Inbox />, active: current('inbox'), badge: unreadMessages },
     ];
 
     const staff = allowed([
         { label: t('Bookings'), href: route('admin.bookings.index'), icon: <CalendarCheck />, active: current('admin.bookings.*'), badge: pendingBookings, permission: 'bookings.view' },
         { label: t('Calendar'), href: route('admin.calendar'), icon: <CalendarDays />, active: current('admin.calendar'), permission: 'bookings.view' },
+        { label: t('Messages'), href: route('admin.messages.index'), icon: <Send />, active: current('admin.messages.*'), permission: 'messages.send' },
     ]);
 
     const admin = allowed([
@@ -64,7 +66,9 @@ export default function AppLayout({ children, header }: PropsWithChildren<{ head
                     <span>{item.label}</span>
                 </Link>
             </SidebarMenuButton>
-            {!!item.badge && <SidebarMenuBadge className="bg-amber-500 text-white">{item.badge}</SidebarMenuBadge>}
+            {!!item.badge && (
+                <SidebarMenuBadge className={item.href === route('inbox') ? 'bg-primary text-primary-foreground' : 'bg-amber-500 text-white'}>{item.badge}</SidebarMenuBadge>
+            )}
         </SidebarMenuItem>
     ));
 

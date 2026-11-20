@@ -28,6 +28,7 @@ class BookingPresenter
             'requires_approval' => $type->requires_approval,
             'max_quantity_per_booking' => max(1, $type->max_quantity_per_booking),
             'cancellation_hours' => $type->cancellation_hours,
+            'reminder_hours' => $type->reminder_hours,
             'min_advance_minutes' => $type->min_advance_minutes,
             'max_advance_days' => $type->max_advance_days,
             'slot_interval_minutes' => $type->slot_interval_minutes,

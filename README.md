@@ -50,6 +50,17 @@ samo administrator. Meni v administraciji se zgradi iz pravic.
 
 Gost (brez računa) dobi po e-pošti povezavo z žetonom za ogled in odpoved rezervacije.
 
+### Obveščanje strank
+
+- **Samodejna e-pošta** ob oddaji, potrditvi, zavrnitvi in odpovedi rezervacije (`BookingNotifier`).
+- **Opomnik** X ur pred začetkom potrjene rezervacije — nastavitev tipa vira (`reminder_hours`, prazno = brez).
+  Ukaz `bookings:send-reminders` teče v razporejevalniku vsakih 15 minut.
+- **Ročna sporočila** (Obveščanje, pravica `messages.send`): prejemniki so stranke/skupine strank, stranke z
+  rezervacijo v obdobju (tudi gostje; po želji tip ali vir) ali izbrani uporabniki. Kanala: e-pošta (v čakalni
+  vrsti, stanje po prejemnikih) in nabiralnik v portalu (meni »Sporočila« z oznako neprebranih).
+- **Zaprtje z obveščanjem**: obrazec za zaprtje pokaže rezervacije v tem obdobju in jih po izbiri odpove;
+  stranke dobijo e-pošto o odpovedi z razlogom zaprtja.
+
 ## Koda
 
 - `app/Services/Booking/` — jedro: `BookingService` (skupna pravila, zaklepanje, statusi),
@@ -82,6 +93,9 @@ php artisan test     # testi tečejo na SQLite v pomnilniku, razvojna baza ostan
 ```
 
 E-pošta gre v Herdov lovilnik pošte (SMTP 127.0.0.1:2525) — sporočila vidite v Herd → Mail.
+Lokalno je `QUEUE_CONNECTION=sync` (ročna sporočila se pošljejo takoj); opomnike preizkusite z
+`php artisan bookings:send-reminders` ali `php artisan schedule:work`. V Dockerju tečeta queue worker in
+razporejevalnik prek supervisord.
 
 Preizkus produkcijske slike s PostgreSQL: `docker compose up --build`, nato
 `docker compose exec app php artisan db:seed --force` → http://localhost:8080.

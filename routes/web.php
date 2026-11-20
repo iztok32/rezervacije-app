@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin;
 use App\Http\Controllers\BookingFlowController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\InboxController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\ManageBookingController;
 use App\Http\Controllers\MyBookingsController;
@@ -32,6 +33,7 @@ Route::post('/bookings/{booking}/cancel', [ManageBookingController::class, 'canc
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/my-bookings', [MyBookingsController::class, 'index'])->name('my-bookings');
+    Route::get('/inbox', [InboxController::class, 'index'])->name('inbox');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
@@ -82,8 +84,18 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function () {
 
     Route::middleware('can:closures.manage')->group(function () {
         Route::get('closures', [Admin\ClosureController::class, 'index'])->name('closures.index');
+        Route::get('closures/affected', [Admin\ClosureController::class, 'affected'])->name('closures.affected');
         Route::post('closures', [Admin\ClosureController::class, 'store'])->name('closures.store');
         Route::delete('closures/{closure}', [Admin\ClosureController::class, 'destroy'])->name('closures.destroy');
+    });
+
+    Route::middleware('can:messages.send')->group(function () {
+        Route::get('messages', [Admin\MessageController::class, 'index'])->name('messages.index');
+        Route::get('messages/create', [Admin\MessageController::class, 'create'])->name('messages.create');
+        Route::post('messages/preview', [Admin\MessageController::class, 'preview'])->name('messages.preview');
+        Route::get('messages/users', [Admin\MessageController::class, 'users'])->name('messages.users');
+        Route::post('messages', [Admin\MessageController::class, 'store'])->middleware('throttle:10,1')->name('messages.store');
+        Route::get('messages/{message}', [Admin\MessageController::class, 'show'])->name('messages.show');
     });
 
     Route::middleware('can:users.manage')->group(function () {

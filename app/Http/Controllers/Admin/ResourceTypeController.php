@@ -180,6 +180,7 @@ class ResourceTypeController extends Controller
             'min_advance_minutes' => 'required|integer|min:0|max:525600',
             'max_advance_days' => 'required|integer|min:0|max:1095',
             'cancellation_hours' => 'nullable|integer|min:0|max:8760',
+            'reminder_hours' => 'nullable|integer|min:1|max:336',
             'slot_interval_minutes' => 'required|integer|min:5|max:1440',
             'min_duration_minutes' => 'nullable|integer|min:5|max:1440',
             'max_duration_minutes' => 'nullable|integer|min:5|max:1440|gte:min_duration_minutes',

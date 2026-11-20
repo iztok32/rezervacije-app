@@ -56,6 +56,9 @@ class HandleInertiaRequests extends Middleware
             'pendingBookings' => fn () => $user?->hasPermission(Permission::BookingsView)
                 ? Booking::visibleTo($user)->where('status', BookingStatus::Pending)->count()
                 : 0,
+            'unreadMessages' => fn () => $user
+                ? $user->inbox()->whereNull('read_at')->count()
+                : 0,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),

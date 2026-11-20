@@ -21,7 +21,7 @@ class Booking extends Model
         'user_id', 'customer_name', 'customer_email', 'customer_phone', 'locale',
         'starts_at', 'ends_at', 'blocks_until', 'quantity',
         'status', 'total_price', 'notes', 'internal_notes',
-        'created_by_user_id', 'confirmed_at', 'cancelled_at', 'cancellation_reason',
+        'created_by_user_id', 'confirmed_at', 'cancelled_at', 'cancellation_reason', 'reminder_sent_at',
     ];
 
     protected $hidden = ['access_token'];
@@ -34,6 +34,7 @@ class Booking extends Model
             'blocks_until' => 'datetime',
             'confirmed_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'reminder_sent_at' => 'datetime',
             'quantity' => 'integer',
             'total_price' => 'decimal:2',
             'status' => BookingStatus::class,

@@ -1,7 +1,7 @@
 import { router, useForm } from '@inertiajs/react';
 import { FormEvent } from 'react';
 import Field from '@/Components/Field';
-import { numberOrNull, selectClass, SwitchRow } from '@/Components/form/inputs';
+import { MultiCheck, numberOrNull, selectClass, SwitchRow } from '@/Components/form/inputs';
 import { Button } from '@/Components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card';
 import { Input } from '@/Components/ui/input';
@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { EditProps } from './types';
 
 /** Nastavitve tipa vira: osnovno, pravila rezervacij in nastavitve, specifične za način. */
-export default function SettingsTab({ type, modes, selections }: EditProps) {
+export default function SettingsTab({ type, modes, selections, customerGroups }: EditProps) {
     const { t } = useTranslation();
     const form = useForm({
         name: type.name,
@@ -38,6 +38,7 @@ export default function SettingsTab({ type, modes, selections }: EditProps) {
         max_units: type.max_units as number | null,
         max_quantity_per_booking: type.max_quantity_per_booking,
         is_active: type.is_active,
+        customer_group_ids: type.customer_group_ids,
     });
     const d = form.data;
     const e = form.errors;
@@ -102,8 +103,16 @@ export default function SettingsTab({ type, modes, selections }: EditProps) {
                             {selections.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                         </select>
                     </Field>
-                    <SwitchRow checked={d.allow_guests} onChange={(v) => form.setData('allow_guests', v)}
-                        label={t('Guests can book')} description={t('Without an account, with name, email and phone.')} />
+                    {customerGroups.length > 0 && (
+                        <Field label={t('Available to')} error={e.customer_group_ids}
+                            hint={d.customer_group_ids.length ? t('Only members of the selected groups can see and book this offer.') : t('All customers. Select groups to limit access, e.g. members only.')}>
+                            <MultiCheck options={customerGroups.map((g) => ({ value: g.id, label: g.name }))} value={d.customer_group_ids}
+                                onChange={(v) => form.setData('customer_group_ids', v)} />
+                        </Field>
+                    )}
+                    <SwitchRow checked={d.allow_guests && d.customer_group_ids.length === 0} onChange={(v) => form.setData('allow_guests', v)}
+                        label={t('Guests can book')}
+                        description={d.customer_group_ids.length ? t('Not possible when access is limited to customer groups.') : t('Without an account, with name, email and phone.')} />
                     <SwitchRow checked={d.requires_approval} onChange={(v) => form.setData('requires_approval', v)}
                         label={t('Requires approval')} description={t('Bookings wait for confirmation by staff.')} />
                     <Field label={t('Minimum notice (minutes)')} error={e.min_advance_minutes} hint={t('How long before the start a booking is still possible.')}>

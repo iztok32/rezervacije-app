@@ -26,10 +26,21 @@ class BookingFlowController extends Controller
         private Availability $availability,
     ) {}
 
-    public function show(Request $request, ResourceType $resourceType): Response
+    public function show(Request $request, ResourceType $resourceType): Response|RedirectResponse
     {
         $user = $request->user();
-        abort_unless($resourceType->is_active || $user?->isStaff(), 404);
+        $privileged = $this->bookings->privileged($resourceType, $user);
+        abort_unless($resourceType->is_active || $privileged, 404);
+
+        // Ponudba samo za izbrane skupine strank: gost se najprej prijavi
+        if (! $privileged && ! $resourceType->isOpenTo($user)) {
+            if (! $user) {
+                $request->session()->put('url.intended', $request->fullUrl());
+
+                return redirect()->route('login');
+            }
+            abort(403, __('This offer is only available to selected customer groups.'));
+        }
 
         $resources = $this->availability->eligibleResources($resourceType)
             ->map(fn ($r) => BookingPresenter::resource($r))
@@ -64,13 +75,15 @@ class BookingFlowController extends Controller
             'lastBookableDate' => $this->availability->lastBookableDate($resourceType)->toDateString(),
             'requiresLogin' => ! $user && ! $resourceType->allow_guests,
             'terms' => Setting::get('booking.terms'),
-            'isStaff' => (bool) $user?->isStaff(),
+            'isStaff' => $privileged,
         ]);
     }
 
     public function availability(Request $request, ResourceType $resourceType): JsonResponse
     {
-        abort_unless($resourceType->is_active || $request->user()?->isStaff(), 404);
+        $privileged = $this->bookings->privileged($resourceType, $request->user());
+        abort_unless($resourceType->is_active || $privileged, 404);
+        abort_unless($privileged || $resourceType->isOpenTo($request->user()), 403);
 
         $handler = $this->bookings->handler($resourceType);
         $query = $request->validate($handler->availabilityRules());
@@ -86,7 +99,7 @@ class BookingFlowController extends Controller
         $booking = $this->bookings->create($resourceType, $validated, $user);
 
         // Osebje se vrne na podrobnosti v administraciji, stranka na potrditveno stran
-        if ($user?->isStaff()) {
+        if ($this->bookings->privileged($resourceType, $user)) {
             return redirect()->route('admin.bookings.show', $booking)
                 ->with('success', __('Booking :reference created.', ['reference' => $booking->reference]));
         }

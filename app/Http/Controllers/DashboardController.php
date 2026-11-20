@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\BookingStatus;
+use App\Enums\Permission;
 use App\Http\Presenters\BookingPresenter;
 use App\Models\Booking;
 use Illuminate\Http\Request;
@@ -19,7 +20,7 @@ class DashboardController extends Controller
     {
         $user = $request->user();
 
-        if (! $user->isStaff()) {
+        if (! $user->hasPermission(Permission::BookingsView)) {
             $upcoming = Booking::with(['type', 'resource', 'service', 'timeslot'])
                 ->where('user_id', $user->id)
                 ->active()
@@ -33,14 +34,16 @@ class DashboardController extends Controller
             ]);
         }
 
-        $today = Booking::with(['type', 'resource', 'service', 'timeslot'])
+        $visible = fn () => Booking::visibleTo($user);
+
+        $today = $visible()->with(['type', 'resource', 'service', 'timeslot'])
             ->active()
             ->where('starts_at', '<', today()->addDay())
             ->where('ends_at', '>', today())
             ->orderBy('starts_at')
             ->get();
 
-        $pending = Booking::with(['type', 'resource', 'service', 'timeslot'])
+        $pending = $visible()->with(['type', 'resource', 'service', 'timeslot'])
             ->where('status', BookingStatus::Pending)
             ->orderBy('starts_at')
             ->limit(20)
@@ -48,10 +51,10 @@ class DashboardController extends Controller
 
         $stats = [
             'today' => $today->count(),
-            'pending' => Booking::where('status', BookingStatus::Pending)->count(),
-            'next7' => Booking::active()->whereBetween('starts_at', [now(), now()->addDays(7)])->count(),
-            'created30' => Booking::where('created_at', '>=', now()->subDays(30))->count(),
-            'revenue30' => (float) Booking::whereIn('status', ['confirmed', 'completed'])
+            'pending' => $visible()->where('status', BookingStatus::Pending)->count(),
+            'next7' => $visible()->active()->whereBetween('starts_at', [now(), now()->addDays(7)])->count(),
+            'created30' => $visible()->where('created_at', '>=', now()->subDays(30))->count(),
+            'revenue30' => (float) $visible()->whereIn('status', ['confirmed', 'completed'])
                 ->whereBetween('starts_at', [now()->subDays(30), now()])
                 ->sum('total_price'),
         ];

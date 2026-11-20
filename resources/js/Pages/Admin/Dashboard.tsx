@@ -11,6 +11,7 @@ import {
 import { formatLongDate, toIsoDate } from '@/lib/dates';
 import { TypeIcon } from '@/lib/icons';
 import { useTranslation } from '@/lib/i18n';
+import { useCan } from '@/lib/permissions';
 import { Booking, PageProps } from '@/types';
 
 interface Props {
@@ -23,6 +24,7 @@ interface Props {
 export default function Dashboard({ today, pending, stats }: Props) {
     const { bookableTypes } = usePage<PageProps>().props;
     const { t, money, locale } = useTranslation();
+    const can = useCan();
 
     const tiles = [
         { label: t('Today'), value: stats.today, icon: CalendarDays },
@@ -37,7 +39,7 @@ export default function Dashboard({ today, pending, stats }: Props) {
             <PageHeader
                 title={t('Overview')}
                 description={formatLongDate(toIsoDate(new Date()), locale)}
-                actions={bookableTypes.length > 0 && (
+                actions={can('bookings.create') && bookableTypes.length > 0 && (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button><Plus className="mr-1.5 h-4 w-4" />{t('New booking')}</Button>

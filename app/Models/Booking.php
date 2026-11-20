@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\BookingStatus;
+use App\Enums\Permission;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -107,6 +108,40 @@ class Booking extends Model
     public function scopeOverlapping(Builder $query, Carbon $from, Carbon $to): Builder
     {
         return $query->where('starts_at', '<', $to)->where('blocks_until', '>', $from);
+    }
+
+    /**
+     * Rezervacije, ki jih član osebja sme videti: potrebuje pravico za ogled, upošteva
+     * omejitev vloge na tipe virov in doseg "samo svoji viri" (vir ali vodja termina).
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        if (! $user->hasPermission(Permission::BookingsView)) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        if ($types = $user->allowedResourceTypeIds()) {
+            $query->whereIn('resource_type_id', $types);
+        }
+
+        if ($user->seesOnlyOwnBookings()) {
+            $query->where(fn (Builder $q) => $q
+                ->whereHas('resource', fn (Builder $r) => $r->where('user_id', $user->id))
+                ->orWhereHas('timeslot.staff', fn (Builder $s) => $s->where('users.id', $user->id)));
+        }
+
+        return $query;
+    }
+
+    public function isVisibleTo(User $user): bool
+    {
+        return static::visibleTo($user)->whereKey($this->id)->exists();
+    }
+
+    /** Osebje, ki sme rezervacijo potrjevati, odpovedati in urejati. */
+    public function isManageableBy(?User $user): bool
+    {
+        return $user !== null && $user->hasPermission(Permission::BookingsManage) && $this->isVisibleTo($user);
     }
 
     public function isActive(): bool

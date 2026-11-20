@@ -4,10 +4,12 @@ namespace App\Services\Booking;
 
 use App\Enums\BookingMode;
 use App\Enums\BookingStatus;
+use App\Enums\Permission;
 use App\Models\Booking;
 use App\Models\Resource;
 use App\Models\ResourceType;
 use App\Models\Setting;
+use App\Models\Timeslot;
 use App\Models\User;
 use App\Services\Booking\Modes\BookingModeHandler;
 use App\Services\Booking\Modes\HourlyHandler;
@@ -55,7 +57,9 @@ class BookingService
             'notes' => 'nullable|string|max:1000',
         ];
 
-        if ($actor?->isStaff()) {
+        $privileged = $this->privileged($type, $actor);
+
+        if ($privileged) {
             // Osebje rezervira za obstoječega uporabnika ali vpiše podatke stranke
             $rules['user_id'] = 'nullable|integer|exists:users,id';
             $rules['customer_name'] = 'required_without:user_id|nullable|string|max:255';
@@ -70,7 +74,7 @@ class BookingService
             $rules['customer_phone'] = 'required|string|max:40';
         }
 
-        if (! $actor?->isStaff() && Setting::get('booking.terms')) {
+        if (! $privileged && Setting::get('booking.terms')) {
             $rules['accept_terms'] = 'accepted';
         }
 
@@ -82,13 +86,16 @@ class BookingService
      */
     public function create(ResourceType $type, array $input, ?User $actor): Booking
     {
-        $privileged = (bool) $actor?->isStaff();
+        $privileged = $this->privileged($type, $actor);
 
         if (! $type->is_active && ! $privileged) {
             throw new BookingException('resource_type', __('Bookings are currently not available.'));
         }
         if (! $actor && ! $type->allow_guests) {
             throw new BookingException('auth', __('Please log in to make a booking.'));
+        }
+        if (! $privileged) {
+            $this->ensureOpenTo($type, $input, $actor);
         }
 
         $customer = $this->customer($input, $actor, $privileged);
@@ -122,8 +129,8 @@ class BookingService
     /** Ali sme $actor (ali gost z žetonom) videti rezervacijo. */
     public function canView(Booking $booking, ?User $actor, ?string $token): bool
     {
-        return (bool) $actor?->isStaff()
-            || ($actor && $booking->user_id === $actor->id)
+        return ($actor && $booking->user_id === $actor->id)
+            || ($actor?->hasPermission(Permission::BookingsView) && $booking->isVisibleTo($actor))
             || ($token && hash_equals($booking->access_token, $token));
     }
 
@@ -133,7 +140,7 @@ class BookingService
         if (! $booking->isActive()) {
             return __('This booking can no longer be cancelled.');
         }
-        if ($actor?->isStaff()) {
+        if ($booking->isManageableBy($actor)) {
             return null;
         }
         if ($booking->starts_at->lte(now())) {
@@ -174,7 +181,7 @@ class BookingService
     /** Sprememba statusa s strani osebja (potrditev, zavrnitev, zaključek, neprihod). */
     public function changeStatus(Booking $booking, BookingStatus $status, User $actor, ?string $reason = null): Booking
     {
-        abort_unless($actor->isStaff(), 403);
+        abort_unless($booking->isManageableBy($actor), 403);
 
         if (! in_array($status->value, self::TRANSITIONS[$booking->status->value], true)) {
             throw new BookingException('status', __('This status change is not allowed.'));
@@ -203,7 +210,7 @@ class BookingService
     /** Dodelitev ali zamenjava vira (npr. konja) s strani osebja; preveri, da je vir prost. */
     public function assignResource(Booking $booking, ?int $resourceId, User $actor): Booking
     {
-        abort_unless($actor->isStaff(), 403);
+        abort_unless($booking->isManageableBy($actor), 403);
 
         if ($resourceId) {
             $resource = Resource::where('resource_type_id', $booking->resource_type_id)->find($resourceId);
@@ -230,6 +237,28 @@ class BookingService
         }
 
         return $booking;
+    }
+
+    /** Osebje, ki rezervira za stranko: brez okna za rezervacije, omejitev skupin in potrjevanja. */
+    public function privileged(ResourceType $type, ?User $actor): bool
+    {
+        return (bool) $actor?->canBookForOthers($type);
+    }
+
+    /** Ponudba ali termin, omejen na skupine strank, ki jim stranka ne pripada. */
+    private function ensureOpenTo(ResourceType $type, array $input, ?User $actor): void
+    {
+        $timeslot = ! empty($input['timeslot_id'])
+            ? Timeslot::where('resource_type_id', $type->id)->find($input['timeslot_id'])
+            : null;
+
+        if ($type->isOpenTo($actor) && (! $timeslot || $timeslot->isOpenTo($actor))) {
+            return;
+        }
+
+        throw $actor
+            ? new BookingException('resource_type', __('This offer is only available to selected customer groups.'))
+            : new BookingException('auth', __('Please log in to make a booking.'));
     }
 
     /**

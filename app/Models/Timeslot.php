@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\RestrictedToCustomerGroups;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,7 +17,7 @@ use Illuminate\Support\Carbon;
  */
 class Timeslot extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, RestrictedToCustomerGroups, SoftDeletes;
 
     protected $fillable = [
         'resource_type_id', 'name', 'description', 'weekdays', 'start_time', 'end_time',

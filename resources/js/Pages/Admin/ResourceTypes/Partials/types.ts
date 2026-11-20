@@ -4,6 +4,7 @@ export interface EditType extends ResourceTypeData {
     check_in_time_raw: string | null;
     check_out_time_raw: string | null;
     resource_label_raw: string | null;
+    customer_group_ids: number[];
 }
 
 export interface AdminResource {
@@ -45,6 +46,7 @@ export interface AdminTimeslot {
     is_active: boolean;
     resource_ids: number[];
     staff_ids: number[];
+    customer_group_ids: number[];
 }
 
 export interface WorkingHourRow {
@@ -70,6 +72,7 @@ export interface EditProps {
     workingHours: WorkingHourRow[];
     closures: ClosureRow[];
     staff: { id: number; name: string }[];
+    customerGroups: { id: number; name: string }[];
     modes: Option[];
     selections: Option[];
 }

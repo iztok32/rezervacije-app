@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -33,19 +34,32 @@ class UserFactory extends Factory
         ];
     }
 
+    /** Sistemske vloge iz migracije: admin, reception, provider. */
+    public function withRole(string $slug): static
+    {
+        return $this->state(fn () => ['role_id' => Role::bySlug($slug)?->id]);
+    }
+
+    public function admin(): static
+    {
+        return $this->withRole('admin');
+    }
+
+    /** Recepcija: vse rezervacije, rezervacije za stranke, zaprtja. */
+    public function staff(): static
+    {
+        return $this->withRole('reception');
+    }
+
+    /** Izvajalec: samo rezervacije svojih virov. */
+    public function provider(): static
+    {
+        return $this->withRole('provider');
+    }
+
     /**
      * Indicate that the model's email address should be unverified.
      */
-    public function admin(): static
-    {
-        return $this->state(fn () => ['role' => 'admin']);
-    }
-
-    public function staff(): static
-    {
-        return $this->state(fn () => ['role' => 'staff']);
-    }
-
     public function unverified(): static
     {
         return $this->state(fn (array $attributes) => [

@@ -3,15 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\ResourceType;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class HomeController extends Controller
 {
     /** Javna stran s ponudbo (aktivni tipi virov). */
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $types = ResourceType::active()->ordered()
+        $types = ResourceType::active()->ordered()->openTo($request->user())
             ->withCount(['resources' => fn ($q) => $q->active()])
             ->get()
             ->map(fn (ResourceType $t) => [

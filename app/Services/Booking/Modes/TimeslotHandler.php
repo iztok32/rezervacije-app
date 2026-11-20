@@ -52,6 +52,8 @@ class TimeslotHandler implements BookingModeHandler
         $timeslots = Timeslot::with(['resources:id', 'staff:id,name'])
             ->where('resource_type_id', $type->id)
             ->active()
+            // Termini, omejeni na skupine strank, so vidni samo članom (in osebju)
+            ->when(! $viewer?->canBookForOthers($type), fn ($q) => $q->openTo($viewer))
             ->orderBy('start_time')
             ->orderBy('display_order')
             ->get();

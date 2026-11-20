@@ -5,41 +5,62 @@ import AppLayout from '@/Layouts/AppLayout';
 import PageHeader from '@/Components/PageHeader';
 import Pagination from '@/Components/Pagination';
 import Field from '@/Components/Field';
-import { selectClass, SwitchRow } from '@/Components/form/inputs';
+import { MultiCheck, selectClass, SwitchRow } from '@/Components/form/inputs';
+import { Badge } from '@/Components/ui/badge';
 import { Button } from '@/Components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/Components/ui/dialog';
 import { Input } from '@/Components/ui/input';
 import { useTranslation } from '@/lib/i18n';
-import { Option, PageProps, PaginationLink, Role } from '@/types';
+import { PageProps, PaginationLink } from '@/types';
+
+interface GroupRef {
+    id: number;
+    name: string;
+    color: string | null;
+}
+
+interface RoleRef {
+    id: number;
+    name: string;
+    is_admin: boolean;
+}
 
 interface UserRow {
     id: number;
     name: string;
     email: string;
     phone: string | null;
-    role: Role;
+    role_id: number | null;
+    role: string | null;
+    is_admin: boolean;
     is_active: boolean;
+    groups: GroupRef[];
     bookings_count: number;
     created_at: string | null;
 }
 
 interface Props {
     users: { data: UserRow[]; links: PaginationLink[] };
-    filters: { q?: string; role?: string };
-    roles: Option<Role>[];
+    filters: { q?: string; role?: string; group?: number };
+    roles: RoleRef[];
+    groups: GroupRef[];
+    canManageRoles: boolean;
+    canAssignAdmin: boolean;
 }
 
-/** Uporabniki in vloge: administrator, osebje, stranka. */
-export default function Index({ users, filters, roles }: Props) {
+/** Uporabniki: stranke (brez vloge) in osebje (z vlogo) ter članstvo v skupinah strank. */
+export default function Index({ users, filters, roles, groups, canManageRoles, canAssignAdmin }: Props) {
     const { auth } = usePage<PageProps>().props;
     const { t } = useTranslation();
     const [editing, setEditing] = useState<UserRow | 'new' | null>(null);
     const [q, setQ] = useState(filters.q ?? '');
-    const roleLabel = (r: Role) => roles.find((o) => o.value === r)?.label ?? r;
+
+    const filter = (changes: Partial<Props['filters']>) =>
+        router.get(route('admin.users.index'), { ...filters, ...changes }, { preserveState: true });
 
     const search = (e: FormEvent) => {
         e.preventDefault();
-        router.get(route('admin.users.index'), { ...filters, q: q || undefined }, { preserveState: true });
+        filter({ q: q || undefined });
     };
 
     return (
@@ -47,7 +68,7 @@ export default function Index({ users, filters, roles }: Props) {
             <Head title={t('Users')} />
             <PageHeader
                 title={t('Users')}
-                description={t('Staff manage bookings; administrators also manage the offer and settings.')}
+                description={t('Customers have no role. Staff get a role that defines their permissions.')}
                 actions={<Button onClick={() => setEditing('new')}><Plus className="mr-1.5 h-4 w-4" />{t('Add user')}</Button>}
             />
 
@@ -56,11 +77,18 @@ export default function Index({ users, filters, roles }: Props) {
                     <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input className="pl-9" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('Name or email')} />
                 </div>
-                <select className={`${selectClass} w-auto`} value={filters.role ?? ''}
-                    onChange={(e) => router.get(route('admin.users.index'), { ...filters, role: e.target.value || undefined }, { preserveState: true })}>
-                    <option value="">{t('All roles')}</option>
-                    {roles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                <select className={`${selectClass} w-auto`} value={filters.role ?? ''} onChange={(e) => filter({ role: e.target.value || undefined })}>
+                    <option value="">{t('All users')}</option>
+                    <option value="customer">{t('Customers')}</option>
+                    <option value="staff">{t('Staff')}</option>
+                    {roles.map((r) => <option key={r.id} value={String(r.id)}>— {r.name}</option>)}
                 </select>
+                {groups.length > 0 && (
+                    <select className={`${selectClass} w-auto`} value={filters.group ?? ''} onChange={(e) => filter({ group: e.target.value ? Number(e.target.value) : undefined })}>
+                        <option value="">{t('All groups')}</option>
+                        {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                    </select>
+                )}
             </form>
 
             <div className="overflow-x-auto rounded-lg border bg-card">
@@ -70,46 +98,80 @@ export default function Index({ users, filters, roles }: Props) {
                             <th className="p-3 font-medium">{t('Name')}</th>
                             <th className="p-3 font-medium">{t('Contact')}</th>
                             <th className="p-3 font-medium">{t('Role')}</th>
+                            <th className="p-3 font-medium">{t('Groups')}</th>
                             <th className="p-3 text-right font-medium">{t('Bookings')}</th>
                             <th className="p-3" />
                         </tr>
                     </thead>
                     <tbody className="divide-y">
-                        {users.data.map((u) => (
-                            <tr key={u.id} className={u.is_active ? '' : 'opacity-50'}>
-                                <td className="p-3 font-medium">{u.name}{!u.is_active && <span className="ml-2 text-xs font-normal">({t('inactive')})</span>}</td>
-                                <td className="p-3 text-muted-foreground">{u.email}{u.phone && <span className="block text-xs">{u.phone}</span>}</td>
-                                <td className="p-3">{roleLabel(u.role)}</td>
-                                <td className="p-3 text-right tabular-nums">{u.bookings_count}</td>
-                                <td className="whitespace-nowrap p-3 text-right">
-                                    <Button size="icon" variant="ghost" onClick={() => setEditing(u)}><Pencil className="h-4 w-4" /></Button>
-                                    {u.id !== auth.user!.id && (
-                                        <Button size="icon" variant="ghost" onClick={() => confirm(t('Delete :name?', { name: u.name })) && router.delete(route('admin.users.destroy', u.id), { preserveScroll: true })}>
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
+                        {users.data.map((u) => {
+                            const locked = u.is_admin && !canAssignAdmin;
+                            return (
+                                <tr key={u.id} className={u.is_active ? '' : 'opacity-50'}>
+                                    <td className="p-3 font-medium">{u.name}{!u.is_active && <span className="ml-2 text-xs font-normal">({t('inactive')})</span>}</td>
+                                    <td className="p-3 text-muted-foreground">{u.email}{u.phone && <span className="block text-xs">{u.phone}</span>}</td>
+                                    <td className="p-3">{u.role ?? <span className="text-muted-foreground">{t('Customer')}</span>}</td>
+                                    <td className="p-3">
+                                        <div className="flex flex-wrap gap-1">
+                                            {u.groups.map((g) => (
+                                                <Badge key={g.id} variant="outline" className="gap-1.5 font-normal">
+                                                    <span className="h-2 w-2 rounded-full" style={{ background: g.color ?? 'var(--muted-foreground)' }} />{g.name}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    </td>
+                                    <td className="p-3 text-right tabular-nums">{u.bookings_count}</td>
+                                    <td className="whitespace-nowrap p-3 text-right">
+                                        {!locked && (
+                                            <Button size="icon" variant="ghost" onClick={() => setEditing(u)} aria-label={t('Edit')}><Pencil className="h-4 w-4" /></Button>
+                                        )}
+                                        {!locked && u.id !== auth.user!.id && (!u.role_id || canManageRoles) && (
+                                            <Button size="icon" variant="ghost" aria-label={t('Delete')}
+                                                onClick={() => confirm(t('Delete :name?', { name: u.name })) && router.delete(route('admin.users.destroy', u.id), { preserveScroll: true })}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        )}
+                                    </td>
+                                </tr>
+                            );
+                        })}
                     </tbody>
                 </table>
             </div>
             <Pagination links={users.links} />
 
-            {editing && <UserDialog user={editing === 'new' ? null : editing} roles={roles} onClose={() => setEditing(null)} />}
+            {editing && (
+                <UserDialog
+                    user={editing === 'new' ? null : editing}
+                    isSelf={editing !== 'new' && editing.id === auth.user!.id}
+                    roles={roles.filter((r) => !r.is_admin || canAssignAdmin)}
+                    groups={groups}
+                    canManageRoles={canManageRoles}
+                    onClose={() => setEditing(null)}
+                />
+            )}
         </AppLayout>
     );
 }
 
-function UserDialog({ user, roles, onClose }: { user: UserRow | null; roles: Option<Role>[]; onClose: () => void }) {
+function UserDialog({ user, isSelf, roles, groups, canManageRoles, onClose }: {
+    user: UserRow | null;
+    isSelf: boolean;
+    roles: RoleRef[];
+    groups: GroupRef[];
+    canManageRoles: boolean;
+    onClose: () => void;
+}) {
     const { t } = useTranslation();
     const form = useForm({
         name: user?.name ?? '',
         email: user?.email ?? '',
         phone: user?.phone ?? '',
-        role: user?.role ?? 'customer' as Role,
+        role_id: user?.role_id ?? null as number | null,
         is_active: user?.is_active ?? true,
+        customer_group_ids: user?.groups.map((g) => g.id) ?? [],
     });
+    const roleLocked = !canManageRoles || isSelf;
 
     const submit = (e: FormEvent) => {
         e.preventDefault();
@@ -120,7 +182,7 @@ function UserDialog({ user, roles, onClose }: { user: UserRow | null; roles: Opt
 
     return (
         <Dialog open onOpenChange={(open) => !open && onClose()}>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] overflow-y-auto">
                 <DialogHeader><DialogTitle>{user ? user.name : t('New user')}</DialogTitle></DialogHeader>
                 <form onSubmit={submit} className="space-y-4">
                     <Field label={t('Name')} error={form.errors.name} required><Input value={form.data.name} onChange={(e) => form.setData('name', e.target.value)} autoFocus /></Field>
@@ -128,12 +190,28 @@ function UserDialog({ user, roles, onClose }: { user: UserRow | null; roles: Opt
                         <Input type="email" value={form.data.email} onChange={(e) => form.setData('email', e.target.value)} />
                     </Field>
                     <Field label={t('Phone')} error={form.errors.phone}><Input value={form.data.phone} onChange={(e) => form.setData('phone', e.target.value)} /></Field>
-                    <Field label={t('Role')} error={form.errors.role}>
-                        <select className={selectClass} value={form.data.role} onChange={(e) => form.setData('role', e.target.value as Role)}>
-                            {roles.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                    <Field
+                        label={t('Role')}
+                        error={form.errors.role_id}
+                        hint={isSelf ? t('You cannot change your own role.') : !canManageRoles ? t('Only users who manage roles can change this.') : undefined}
+                    >
+                        <select className={selectClass} value={form.data.role_id ?? ''} disabled={roleLocked}
+                            onChange={(e) => form.setData('role_id', e.target.value ? Number(e.target.value) : null)}>
+                            <option value="">{t('Customer (no role)')}</option>
+                            {/* Trenutna vloga ostane izbrana, tudi če je uporabnik ne sme dodeliti */}
+                            {user?.role_id && !roles.some((r) => r.id === user.role_id) && <option value={user.role_id}>{user.role}</option>}
+                            {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
                         </select>
                     </Field>
-                    <SwitchRow checked={form.data.is_active} onChange={(v) => form.setData('is_active', v)} label={t('Active')} description={t('Inactive users cannot log in.')} />
+                    {groups.length > 0 && (
+                        <Field label={t('Customer groups')} error={form.errors.customer_group_ids}>
+                            <MultiCheck options={groups.map((g) => ({ value: g.id, label: g.name }))} value={form.data.customer_group_ids}
+                                onChange={(v) => form.setData('customer_group_ids', v)} />
+                        </Field>
+                    )}
+                    {!isSelf && (
+                        <SwitchRow checked={form.data.is_active} onChange={(v) => form.setData('is_active', v)} label={t('Active')} description={t('Inactive users cannot log in.')} />
+                    )}
                     <DialogFooter>
                         <Button type="button" variant="ghost" onClick={onClose}>{t('Cancel')}</Button>
                         <Button type="submit" disabled={form.processing}>{t('Save')}</Button>

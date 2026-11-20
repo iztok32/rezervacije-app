@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Enums\BookingStatus;
+use App\Enums\Permission;
 use App\Models\Booking;
 use App\Models\ResourceType;
 use App\Models\Setting;
@@ -31,9 +32,10 @@ class HandleInertiaRequests extends Middleware
                     'name' => $user->name,
                     'email' => $user->email,
                     'phone' => $user->phone,
-                    'role' => $user->role->value,
+                    'role' => $user->role?->name,
                     'is_staff' => $user->isStaff(),
                     'is_admin' => $user->isAdmin(),
+                    'permissions' => $user->permissionList(),
                     'email_verified_at' => $user->email_verified_at,
                 ] : null,
             ],
@@ -48,11 +50,11 @@ class HandleInertiaRequests extends Middleware
                 'allow_registration' => (bool) Setting::get('booking.allow_registration', '1'),
             ],
             // Tipi virov za navigacijo (rezerviraj …)
-            'bookableTypes' => fn () => ResourceType::active()->ordered()
+            'bookableTypes' => fn () => ResourceType::active()->ordered()->openTo($user)
                 ->get(['id', 'name', 'slug', 'icon', 'color'])
                 ->toArray(),
-            'pendingBookings' => fn () => $user?->isStaff()
-                ? Booking::where('status', BookingStatus::Pending)->count()
+            'pendingBookings' => fn () => $user?->hasPermission(Permission::BookingsView)
+                ? Booking::visibleTo($user)->where('status', BookingStatus::Pending)->count()
                 : 0,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

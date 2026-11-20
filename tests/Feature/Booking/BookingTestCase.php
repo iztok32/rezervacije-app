@@ -77,7 +77,7 @@ abstract class BookingTestCase extends TestCase
 
     protected function customer(): User
     {
-        return User::factory()->create(['role' => 'customer']);
+        return User::factory()->create();
     }
 
     protected function staff(): User

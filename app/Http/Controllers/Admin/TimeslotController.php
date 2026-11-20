@@ -30,6 +30,8 @@ class TimeslotController extends Controller
         'resource_ids.*' => 'integer',
         'staff_ids' => 'nullable|array',
         'staff_ids.*' => 'integer',
+        'customer_group_ids' => 'nullable|array',
+        'customer_group_ids.*' => 'integer|exists:customer_groups,id',
     ];
 
     public function store(Request $request, ResourceType $resourceType): RedirectResponse
@@ -74,7 +76,7 @@ class TimeslotController extends Controller
 
     private function attributes(array $validated): array
     {
-        $data = collect($validated)->except(['resource_ids', 'staff_ids'])->all();
+        $data = collect($validated)->except(['resource_ids', 'staff_ids', 'customer_group_ids'])->all();
         $data['weekdays'] = array_values(array_unique(array_map('intval', $validated['weekdays'])));
         sort($data['weekdays']);
 
@@ -89,5 +91,6 @@ class TimeslotController extends Controller
         $timeslot->staff()->sync(
             User::whereIn('id', $validated['staff_ids'] ?? [])->pluck('id')
         );
+        $timeslot->customerGroups()->sync($validated['customer_group_ids'] ?? []);
     }
 }

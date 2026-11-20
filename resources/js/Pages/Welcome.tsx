@@ -4,6 +4,7 @@ import PublicLayout from '@/Layouts/PublicLayout';
 import EmptyState from '@/Components/EmptyState';
 import { TypeIcon } from '@/lib/icons';
 import { useTranslation } from '@/lib/i18n';
+import { useCan } from '@/lib/permissions';
 import { BookingMode, PageProps } from '@/types';
 
 interface TypeCard {
@@ -29,6 +30,7 @@ const MODE_HINTS: Record<BookingMode, { icon: typeof Clock; label: string }> = {
 export default function Welcome({ types }: { types: TypeCard[] }) {
     const { business, auth } = usePage<PageProps>().props;
     const { t } = useTranslation();
+    const can = useCan();
 
     return (
         <PublicLayout>
@@ -49,8 +51,8 @@ export default function Welcome({ types }: { types: TypeCard[] }) {
                 {types.length === 0 ? (
                     <EmptyState
                         title={t('There is nothing to book yet.')}
-                        description={auth.user?.is_admin ? t('Add your first offer in the administration.') : undefined}
-                        action={auth.user?.is_admin ? <Link className="text-sm font-medium text-primary underline" href={route('admin.resource-types.create')}>{t('Add offer')}</Link> : undefined}
+                        description={can('offer.manage') ? t('Add your first offer in the administration.') : undefined}
+                        action={can('offer.manage') ? <Link className="text-sm font-medium text-primary underline" href={route('admin.resource-types.create')}>{t('Add offer')}</Link> : undefined}
                     />
                 ) : (
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

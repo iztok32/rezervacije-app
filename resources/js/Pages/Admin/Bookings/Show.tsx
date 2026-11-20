@@ -18,6 +18,7 @@ interface Props {
     manageUrl: string;
     transitions: Option[];
     resources: { id: number; name: string }[];
+    canManage: boolean;
 }
 
 const ACTION_STYLE: Record<string, 'default' | 'destructive' | 'outline' | 'secondary'> = {
@@ -37,7 +38,7 @@ const ACTION_LABEL: Record<string, string> = {
 };
 
 /** Podrobnosti rezervacije za osebje: statusi, dodelitev vira, interne opombe. */
-export default function Show({ booking, manageUrl, transitions, resources }: Props) {
+export default function Show({ booking, manageUrl, transitions, resources, canManage }: Props) {
     const { t, tc, money, locale } = useTranslation();
     const [reason, setReason] = useState('');
     const notes = useForm({ internal_notes: booking.internal_notes ?? '' });
@@ -106,7 +107,7 @@ export default function Show({ booking, manageUrl, transitions, resources }: Pro
                                 className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
                                 value={booking.resource?.id ?? ''}
                                 onChange={(e) => assign(e.target.value)}
-                                disabled={!['pending', 'confirmed'].includes(booking.status)}
+                                disabled={!canManage || !['pending', 'confirmed'].includes(booking.status)}
                             >
                                 <option value="">— {t('Not assigned')} —</option>
                                 {resources.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
@@ -119,15 +120,15 @@ export default function Show({ booking, manageUrl, transitions, resources }: Pro
                         <CardHeader><CardTitle className="text-base">{t('Internal notes')}</CardTitle></CardHeader>
                         <CardContent>
                             <form onSubmit={saveNotes} className="space-y-2">
-                                <Textarea rows={3} value={notes.data.internal_notes} onChange={(e) => notes.setData('internal_notes', e.target.value)} />
-                                <Button type="submit" size="sm" variant="secondary" disabled={notes.processing || !notes.isDirty}>{t('Save')}</Button>
+                                <Textarea rows={3} value={notes.data.internal_notes} onChange={(e) => notes.setData('internal_notes', e.target.value)} readOnly={!canManage} />
+                                {canManage && <Button type="submit" size="sm" variant="secondary" disabled={notes.processing || !notes.isDirty}>{t('Save')}</Button>}
                             </form>
                         </CardContent>
                     </Card>
                 </div>
 
                 <div className="space-y-6">
-                    <Card>
+                    {canManage && <Card>
                         <CardHeader><CardTitle className="text-base">{t('Actions')}</CardTitle></CardHeader>
                         <CardContent className="space-y-3">
                             {transitions.length === 0 && <p className="text-sm text-muted-foreground">{t('No further actions.')}</p>}
@@ -144,7 +145,7 @@ export default function Show({ booking, manageUrl, transitions, resources }: Pro
                                 ))}
                             </div>
                         </CardContent>
-                    </Card>
+                    </Card>}
 
                     <Card>
                         <CardHeader><CardTitle className="text-base">{t('Customer')}</CardTitle></CardHeader>

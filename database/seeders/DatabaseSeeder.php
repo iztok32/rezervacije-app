@@ -2,13 +2,14 @@
 
 namespace Database\Seeders;
 
-use App\Models\Setting;
+use App\Models\Role;
 use App\Models\User;
 use App\Support\Presets;
 use Illuminate\Database\Seeder;
 
 /**
  * Začetni podatki: administrator in (po želji) tipi virov iz predlog.
+ * Vloge (Administrator, Recepcija, Izvajalec) ustvari že migracija.
  *
  *   SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD  — prvi administrator (privzeto admin@example.com / password)
  *   SEED_PRESETS=hairdresser,court          — katere predloge naložiti (privzeto vse = demo)
@@ -22,7 +23,7 @@ class DatabaseSeeder extends Seeder
             ['email' => env('SEED_ADMIN_EMAIL', 'admin@example.com')],
             [
                 'name' => 'Administrator',
-                'role' => 'admin',
+                'role_id' => Role::admin()?->id,
                 'password' => env('SEED_ADMIN_PASSWORD', 'password'),
                 'email_verified_at' => now(),
             ],
@@ -35,17 +36,8 @@ class DatabaseSeeder extends Seeder
             Presets::apply(trim($preset), $samples);
         }
 
-        // Demo: zaposleni in stranka za preizkus vlog
         if ($samples && app()->environment('local')) {
-            User::firstOrCreate(['email' => 'staff@example.com'], [
-                'name' => 'Zaposleni', 'role' => 'staff', 'password' => 'password', 'email_verified_at' => now(),
-            ]);
-            User::firstOrCreate(['email' => 'stranka@example.com'], [
-                'name' => 'Stranka Demo', 'role' => 'customer', 'password' => 'password', 'email_verified_at' => now(),
-                'phone' => '+386 40 123 456',
-            ]);
-            Setting::set('business.name', 'Demo rezervacije');
-            Setting::set('business.tagline', 'Rezervirajte termin, storitev, vozilo ali nastanitev na enem mestu.');
+            $this->call(DemoSeeder::class);
         }
     }
 }

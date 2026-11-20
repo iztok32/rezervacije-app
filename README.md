@@ -31,11 +31,22 @@ Nastavitve tipa: kdo izbere vir (stranka / samodejno / osebje), ali lahko rezerv
 ali je potrebna potrditev, okno za rezervacije (najmanj X min, največ Y dni vnaprej), rok za odpoved,
 korak začetnih ur, min/max trajanje, čas prihoda/odhoda, min/max noči …
 
-### Vloge
+### Vloge, pravice in skupine strank
 
-- **admin** — vse: ponudba, uporabniki, nastavitve, rezervacije
-- **staff** — rezervacije (potrjevanje, odpovedi, dodelitev vira, vnos za stranko) in koledar
-- **customer** — svoje rezervacije
+Stranka nima vloge. Osebje dobi **vlogo** (`roles`), ki jo administrator ureja v aplikaciji (Vloge):
+
+- **pravice** — seznam je v kodi (`App\Enums\Permission`): `bookings.view`, `bookings.manage`,
+  `bookings.create`, `offer.manage`, `closures.manage`, `users.manage`, `roles.manage`, `settings.manage`;
+  vsaka je tudi Gate (`middleware('can:bookings.view')`, `$user->can(...)`)
+- **doseg rezervacij** — vse ali *samo svoji viri* (vir z `user_id` ali vodja termina), npr. frizerka vidi svoje stranke
+- **omejitev na ponudbo** — vloga velja samo za izbrane tipe virov (prazno = vsi)
+
+Migracija ustvari sistemske vloge *Administrator* (vse pravice, ni urejljiva), *Recepcija* in *Izvajalec*.
+Vlogo uporabniku dodeli samo, kdor ima `roles.manage`; administratorsko vlogo in administratorje ureja
+samo administrator. Meni v administraciji se zgradi iz pravic.
+
+**Skupine strank** (`customer_groups`) omejijo, kdo vidi in rezervira tip vira ali posamezen termin
+(npr. »samo člani«, »napredni jahači«); brez izbranih skupin je ponudba odprta za vse.
 
 Gost (brez računa) dobi po e-pošti povezavo z žetonom za ogled in odpoved rezervacije.
 
@@ -59,7 +70,7 @@ samodejno dosegljiva na http://rezervacije-app.test.
 composer install
 npm install
 
-# baza z demo podatki: admin@example.com / password, staff@example.com, stranka@example.com
+# baza z demo podatki (geslo password): admin@, staff@ (recepcija), maja@ (izvajalka), stranka@example.com
 cp .env.example .env
 php artisan key:generate
 psql -h 127.0.0.1 -U root -d postgres -c "create database rezervacije_app"

@@ -2,7 +2,7 @@ import { Link, router, usePage } from '@inertiajs/react';
 import { PropsWithChildren, ReactNode } from 'react';
 import {
     Ban, CalendarCheck, CalendarDays, ChevronsUpDown, ClipboardList, Home, LayoutDashboard, LogOut,
-    Settings, Shapes, UserRound, Users,
+    Settings, Shapes, ShieldCheck, Tags, UserRound, Users,
 } from 'lucide-react';
 import FlashToaster from '@/Components/FlashToaster';
 import LanguageSwitcher from '@/Components/LanguageSwitcher';
@@ -15,7 +15,8 @@ import {
 } from '@/Components/ui/dropdown-menu';
 import { TypeIcon } from '@/lib/icons';
 import { useTranslation } from '@/lib/i18n';
-import { PageProps } from '@/types';
+import { useCan } from '@/lib/permissions';
+import { PageProps, Permission } from '@/types';
 
 interface NavItem {
     label: string;
@@ -23,13 +24,17 @@ interface NavItem {
     icon: ReactNode;
     active: boolean;
     badge?: number;
+    /** Postavka je vidna samo s to pravico. */
+    permission?: Permission;
 }
 
-/** Postavitev za prijavljene uporabnike: stranska vrstica glede na vlogo. */
+/** Postavitev za prijavljene uporabnike: meni se zgradi iz pravic vloge. */
 export default function AppLayout({ children, header }: PropsWithChildren<{ header?: ReactNode }>) {
     const { auth, business, bookableTypes, pendingBookings } = usePage<PageProps>().props;
     const { t } = useTranslation();
+    const can = useCan();
     const user = auth.user!;
+    const allowed = (items: NavItem[]) => items.filter((item) => !item.permission || can(item.permission));
     const current = (name: string) => route().current(name);
 
     const main: NavItem[] = [
@@ -37,17 +42,19 @@ export default function AppLayout({ children, header }: PropsWithChildren<{ head
         { label: t('My bookings'), href: route('my-bookings'), icon: <ClipboardList />, active: current('my-bookings') },
     ];
 
-    const staff: NavItem[] = user.is_staff ? [
-        { label: t('Bookings'), href: route('admin.bookings.index'), icon: <CalendarCheck />, active: current('admin.bookings.*'), badge: pendingBookings },
-        { label: t('Calendar'), href: route('admin.calendar'), icon: <CalendarDays />, active: current('admin.calendar') },
-    ] : [];
+    const staff = allowed([
+        { label: t('Bookings'), href: route('admin.bookings.index'), icon: <CalendarCheck />, active: current('admin.bookings.*'), badge: pendingBookings, permission: 'bookings.view' },
+        { label: t('Calendar'), href: route('admin.calendar'), icon: <CalendarDays />, active: current('admin.calendar'), permission: 'bookings.view' },
+    ]);
 
-    const admin: NavItem[] = user.is_admin ? [
-        { label: t('Offer'), href: route('admin.resource-types.index'), icon: <Shapes />, active: current('admin.resource-types.*') },
-        { label: t('Closures'), href: route('admin.closures.index'), icon: <Ban />, active: current('admin.closures.*') },
-        { label: t('Users'), href: route('admin.users.index'), icon: <Users />, active: current('admin.users.*') },
-        { label: t('Settings'), href: route('admin.settings.index'), icon: <Settings />, active: current('admin.settings.*') },
-    ] : [];
+    const admin = allowed([
+        { label: t('Offer'), href: route('admin.resource-types.index'), icon: <Shapes />, active: current('admin.resource-types.*'), permission: 'offer.manage' },
+        { label: t('Closures'), href: route('admin.closures.index'), icon: <Ban />, active: current('admin.closures.*'), permission: 'closures.manage' },
+        { label: t('Users'), href: route('admin.users.index'), icon: <Users />, active: current('admin.users.*'), permission: 'users.manage' },
+        { label: t('Customer groups'), href: route('admin.customer-groups.index'), icon: <Tags />, active: current('admin.customer-groups.*'), permission: 'users.manage' },
+        { label: t('Roles'), href: route('admin.roles.index'), icon: <ShieldCheck />, active: current('admin.roles.*'), permission: 'roles.manage' },
+        { label: t('Settings'), href: route('admin.settings.index'), icon: <Settings />, active: current('admin.settings.*'), permission: 'settings.manage' },
+    ]);
 
     const renderItems = (items: NavItem[]) => items.map((item) => (
         <SidebarMenuItem key={item.href}>
@@ -143,7 +150,10 @@ export default function AppLayout({ children, header }: PropsWithChildren<{ head
                                     </SidebarMenuButton>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent side="top" align="start" className="w-56">
-                                    <DropdownMenuLabel className="font-normal text-muted-foreground">{user.email}</DropdownMenuLabel>
+                                    <DropdownMenuLabel className="font-normal text-muted-foreground">
+                                        {user.email}
+                                        {user.role && <span className="block text-xs">{user.role}</span>}
+                                    </DropdownMenuLabel>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem asChild>
                                         <Link href={route('profile.edit')}><UserRound className="mr-2 h-4 w-4" />{t('Profile')}</Link>

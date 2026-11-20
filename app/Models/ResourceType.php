@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\BookingMode;
 use App\Enums\ResourceSelection;
+use App\Models\Concerns\RestrictedToCustomerGroups;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,7 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class ResourceType extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, RestrictedToCustomerGroups, SoftDeletes;
 
     protected $fillable = [
         'name', 'slug', 'description', 'icon', 'color',

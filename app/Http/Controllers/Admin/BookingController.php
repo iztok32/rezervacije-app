@@ -31,7 +31,10 @@ class BookingController extends Controller
             'q' => 'nullable|string|max:100',
         ]);
 
-        $query = Booking::with(['type', 'resource', 'service', 'timeslot', 'user:id,name,email'])
+        $user = $request->user();
+
+        $query = Booking::visibleTo($user)
+            ->with(['type', 'resource', 'service', 'timeslot', 'user:id,name,email'])
             ->when($filters['type'] ?? null, fn ($q, $type) => $q->where('resource_type_id', $type))
             ->when($filters['status'] ?? null, fn ($q, $status) => $status === 'active' ? $q->active() : $q->where('status', $status))
             ->when($filters['from'] ?? null, fn ($q, $from) => $q->where('ends_at', '>=', $from))
@@ -60,13 +63,17 @@ class BookingController extends Controller
                 'total' => $paginator->total(),
             ],
             'filters' => $filters + ['upcoming_only' => $upcomingFirst],
-            'types' => ResourceType::withTrashed()->ordered()->get(['id', 'name', 'slug']),
+            'types' => ResourceType::withTrashed()->ordered()
+                ->when($user->allowedResourceTypeIds(), fn ($q, $ids) => $q->whereIn('id', $ids))
+                ->get(['id', 'name', 'slug']),
             'statuses' => BookingStatus::options(),
         ]);
     }
 
-    public function show(Booking $booking): Response
+    public function show(Request $request, Booking $booking): Response
     {
+        abort_unless($booking->isVisibleTo($request->user()), 403);
+
         $resources = Resource::where('resource_type_id', $booking->resource_type_id)
             ->active()
             ->orderBy('display_order')->orderBy('name')
@@ -79,12 +86,15 @@ class BookingController extends Controller
                 ->map(fn ($s) => ['value' => $s, 'label' => BookingStatus::from($s)->label()])
                 ->values(),
             'resources' => $resources,
+            'canManage' => $booking->isManageableBy($request->user()),
         ]);
     }
 
     /** Dodelitev vira in interne opombe. */
     public function update(Request $request, Booking $booking): RedirectResponse
     {
+        abort_unless($booking->isManageableBy($request->user()), 403);
+
         $validated = $request->validate([
             'resource_id' => 'sometimes|nullable|integer',
             'internal_notes' => 'sometimes|nullable|string|max:1000',

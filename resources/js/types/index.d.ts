@@ -1,4 +1,6 @@
-export type Role = 'admin' | 'staff' | 'customer';
+export type Permission =
+    | 'bookings.view' | 'bookings.manage' | 'bookings.create'
+    | 'offer.manage' | 'closures.manage' | 'users.manage' | 'roles.manage' | 'settings.manage';
 export type BookingMode = 'timeslot' | 'service' | 'nightly' | 'hourly';
 export type ResourceSelection = 'customer' | 'auto' | 'staff';
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'rejected' | 'completed' | 'no_show';
@@ -8,9 +10,11 @@ export interface User {
     name: string;
     email: string;
     phone?: string | null;
-    role: Role;
+    /** Ime vloge osebja; stranka je nima. */
+    role: string | null;
     is_staff: boolean;
     is_admin: boolean;
+    permissions: Permission[];
     email_verified_at?: string | null;
 }
 

@@ -1,6 +1,6 @@
 import { router, useForm } from '@inertiajs/react';
 import { FormEvent, useState } from 'react';
-import { Pencil, Plus, Trash2, Users } from 'lucide-react';
+import { Lock, Pencil, Plus, Trash2, Users } from 'lucide-react';
 import Field from '@/Components/Field';
 import EmptyState from '@/Components/EmptyState';
 import { MultiCheck, numberOrNull, SwitchRow } from '@/Components/form/inputs';
@@ -14,7 +14,7 @@ import { AdminTimeslot, EditProps } from './types';
 
 /** Ponavljajoči se termini s kapaciteto (način "timeslot"). */
 export default function TimeslotsTab(props: EditProps) {
-    const { type, timeslots, resources, staff } = props;
+    const { type, timeslots, resources, staff, customerGroups } = props;
     const { t, money, locale } = useTranslation();
     const [editing, setEditing] = useState<AdminTimeslot | 'new' | null>(null);
     const days = weekdayNames(locale);
@@ -42,6 +42,9 @@ export default function TimeslotsTab(props: EditProps) {
                                     {s.price !== null && <span>{money(s.price)}</span>}
                                     {(s.valid_from || s.valid_to) && <span>{s.valid_from ? formatDate(s.valid_from, locale) : '…'} – {s.valid_to ? formatDate(s.valid_to, locale) : '…'}</span>}
                                     {s.staff_ids.length > 0 && <span>{staff.filter((u) => s.staff_ids.includes(u.id)).map((u) => u.name).join(', ')}</span>}
+                                    {s.customer_group_ids.length > 0 && (
+                                        <span className="inline-flex items-center gap-1"><Lock className="h-3 w-3" />{customerGroups.filter((g) => s.customer_group_ids.includes(g.id)).map((g) => g.name).join(', ')}</span>
+                                    )}
                                 </p>
                             </div>
                             <Button size="icon" variant="ghost" onClick={() => setEditing(s)}><Pencil className="h-4 w-4" /></Button>
@@ -58,7 +61,7 @@ export default function TimeslotsTab(props: EditProps) {
     );
 }
 
-function TimeslotDialog({ type, resources, staff, timeslot, onClose }: EditProps & { timeslot: AdminTimeslot | null; onClose: () => void }) {
+function TimeslotDialog({ type, resources, staff, customerGroups, timeslot, onClose }: EditProps & { timeslot: AdminTimeslot | null; onClose: () => void }) {
     const { t, locale } = useTranslation();
     const days = weekdayNames(locale, 'long');
     const form = useForm({
@@ -74,6 +77,7 @@ function TimeslotDialog({ type, resources, staff, timeslot, onClose }: EditProps
         is_active: timeslot?.is_active ?? true,
         resource_ids: timeslot?.resource_ids ?? [] as number[],
         staff_ids: timeslot?.staff_ids ?? [] as number[],
+        customer_group_ids: timeslot?.customer_group_ids ?? [] as number[],
     });
     const d = form.data;
 
@@ -116,6 +120,12 @@ function TimeslotDialog({ type, resources, staff, timeslot, onClose }: EditProps
                         <MultiCheck options={staff.map((s) => ({ value: s.id, label: s.name }))} value={d.staff_ids} onChange={(v) => form.setData('staff_ids', v)}
                             emptyHint={t('Add staff members under Users.')} />
                     </Field>
+                    {customerGroups.length > 0 && (
+                        <Field label={t('Available to')} hint={t('Empty = everyone who can book this offer.')}>
+                            <MultiCheck options={customerGroups.map((g) => ({ value: g.id, label: g.name }))} value={d.customer_group_ids}
+                                onChange={(v) => form.setData('customer_group_ids', v)} />
+                        </Field>
+                    )}
                     <SwitchRow checked={d.is_active} onChange={(v) => form.setData('is_active', v)} label={t('Active')} />
                     <DialogFooter>
                         <Button type="button" variant="ghost" onClick={onClose}>{t('Cancel')}</Button>

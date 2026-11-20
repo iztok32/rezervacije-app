@@ -41,7 +41,7 @@ class BookingNotifier
     /** Obvestilo stranki o potrditvi, zavrnitvi ali odpovedi (če ni odpovedala sama). */
     public function statusChanged(Booking $booking, ?User $actor): void
     {
-        $byCustomer = ! $actor?->isStaff();
+        $byCustomer = ! $booking->isManageableBy($actor);
 
         $this->safely(fn () => Notification::route('mail', $booking->customer_email)
             ->notify((new BookingStatusChanged($booking, $byCustomer))->locale($booking->locale ?? config('app.locale'))));

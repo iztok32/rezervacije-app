@@ -30,10 +30,15 @@ class CalendarController extends Controller
         $date = Carbon::parse($validated['date'] ?? today());
         $from = $view === 'week' ? $date->copy()->startOfWeek() : $date->copy()->startOfDay();
         $to = $view === 'week' ? $from->copy()->addDays(7) : $from->copy()->addDays(14);
-        $types = ResourceType::ordered()->get(['id', 'name', 'slug', 'color', 'booking_mode']);
+        $user = $request->user();
+        $allowedTypes = $user->allowedResourceTypeIds();
+        $types = ResourceType::ordered()
+            ->when($allowedTypes, fn ($q, $ids) => $q->whereIn('id', $ids))
+            ->get(['id', 'name', 'slug', 'color', 'booking_mode']);
         $type = isset($validated['type']) ? $types->firstWhere('id', (int) $validated['type']) : null;
 
-        $bookings = Booking::with(['type', 'resource', 'service', 'timeslot'])
+        $bookings = Booking::visibleTo($user)
+            ->with(['type', 'resource', 'service', 'timeslot'])
             ->active()
             ->where('starts_at', '<', $to)
             ->where('ends_at', '>', $from)
@@ -43,6 +48,8 @@ class CalendarController extends Controller
 
         $resources = Resource::query()
             ->when($type, fn ($q) => $q->where('resource_type_id', $type->id))
+            ->when($allowedTypes, fn ($q, $ids) => $q->whereIn('resource_type_id', $ids))
+            ->when($user->seesOnlyOwnBookings(), fn ($q) => $q->where('user_id', $user->id))
             ->active()
             ->with('type:id,name')
             ->orderBy('resource_type_id')->orderBy('display_order')->orderBy('name')

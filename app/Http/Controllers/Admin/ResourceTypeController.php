@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\BookingMode;
 use App\Enums\ResourceSelection;
-use App\Enums\Role;
 use App\Http\Controllers\Controller;
 use App\Http\Presenters\BookingPresenter;
 use App\Models\Booking;
 use App\Models\Closure;
+use App\Models\CustomerGroup;
 use App\Models\Resource;
 use App\Models\ResourceType;
 use App\Models\Service;
@@ -93,6 +93,7 @@ class ResourceTypeController extends Controller
                 'check_in_time_raw' => $type->check_in_time ? substr($type->check_in_time, 0, 5) : null,
                 'check_out_time_raw' => $type->check_out_time ? substr($type->check_out_time, 0, 5) : null,
                 'resource_label_raw' => $type->resource_label,
+                'customer_group_ids' => $type->customerGroups()->pluck('customer_groups.id')->all(),
             ],
             'resources' => Resource::where('resource_type_id', $type->id)
                 ->orderBy('display_order')->orderBy('name')
@@ -115,7 +116,7 @@ class ResourceTypeController extends Controller
                     'is_active' => $s->is_active,
                     'resource_ids' => $s->resources->pluck('id')->all(),
                 ]),
-            'timeslots' => Timeslot::with(['resources:id', 'staff:id'])->where('resource_type_id', $type->id)
+            'timeslots' => Timeslot::with(['resources:id', 'staff:id', 'customerGroups:id'])->where('resource_type_id', $type->id)
                 ->orderBy('display_order')->orderBy('start_time')
                 ->get()
                 ->map(fn (Timeslot $t) => [
@@ -132,6 +133,7 @@ class ResourceTypeController extends Controller
                     'is_active' => $t->is_active,
                     'resource_ids' => $t->resources->pluck('id')->all(),
                     'staff_ids' => $t->staff->pluck('id')->all(),
+                    'customer_group_ids' => $t->customerGroups->pluck('id')->all(),
                 ]),
             'workingHours' => WorkingHour::where('resource_type_id', $type->id)
                 ->orderBy('weekday')->orderBy('start_time')
@@ -154,8 +156,9 @@ class ResourceTypeController extends Controller
                     'ends_at' => $c->ends_at->format('Y-m-d\TH:i'),
                     'reason' => $c->reason,
                 ]),
-            'staff' => User::whereIn('role', [Role::Admin, Role::Staff])->where('is_active', true)
+            'staff' => User::whereNotNull('role_id')->where('is_active', true)
                 ->orderBy('name')->get(['id', 'name']),
+            'customerGroups' => CustomerGroup::ordered()->get(['id', 'name']),
             'modes' => BookingMode::options(),
             'selections' => ResourceSelection::options(),
         ]);
@@ -187,6 +190,8 @@ class ResourceTypeController extends Controller
             'max_units' => 'nullable|integer|min:1|max:365|gte:min_units',
             'max_quantity_per_booking' => 'required|integer|min:1|max:100',
             'is_active' => 'boolean',
+            'customer_group_ids' => 'nullable|array',
+            'customer_group_ids.*' => 'integer|exists:customer_groups,id',
         ]);
 
         // Zamenjava načina ob obstoječih prihodnjih rezervacijah bi jih pustila brez pravil
@@ -196,6 +201,8 @@ class ResourceTypeController extends Controller
         }
 
         $validated['icon'] = $validated['icon'] ?: 'calendar';
+        $resourceType->customerGroups()->sync($validated['customer_group_ids'] ?? []);
+        unset($validated['customer_group_ids']);
         $resourceType->update($validated);
 
         return redirect()->route('admin.resource-types.edit', $resourceType)->with('success', __('Saved.'));

@@ -7,7 +7,7 @@
 
 services:
   app:
-    image: rezervacije:latest
+    image: ${DOCKER_IMAGE:-iztokvozlic/rezervacije-app:latest}
     container_name: ${INSTANCE}-app
     labels:
       - "traefik.enable=true"

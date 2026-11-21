@@ -111,14 +111,15 @@ razporejevalnik prek supervisord.
 Preizkus produkcijske slike s PostgreSQL: `docker compose up --build`, nato
 `docker compose exec app php artisan db:seed --force` → http://localhost:8080.
 
-## Nova stranka (instanca)
+## Objava in nova stranka (instanca)
 
 ```sh
-./deploy.sh salon-maja hairdresser           # → https://salon-maja.epro.one
-./deploy.sh kmetija glamping,riding          # več tipov hkrati
-./deploy.sh --all                            # posodobi vse instance
+./publish.sh                                 # razvojni računalnik: slika → Docker Hub (iztokvozlic/rezervacije-app)
+./deploy.sh salon-maja hairdresser           # strežnik: → https://salon-maja.epro.one
+./deploy.sh --all                            # strežnik: posodobi vse instance
 ```
 
 Prva postavitev ustvari `instances/<ime>.env` (skrivnosti, ni v gitu), migrira bazo in naloži
 administratorja ter izbrane predloge. Nadaljnje prilagajanje opravi administrator v aplikaciji
 (Ponudba, Nastavitve) ali z `php artisan preset:add <predloga> [--samples] [--name=...]`.
+Podrobno: [DEPLOYMENT.md](DEPLOYMENT.md).
